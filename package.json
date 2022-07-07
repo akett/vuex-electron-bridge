@@ -1,0 +1,53 @@
+{
+  "name": "vuex-electron-bridge",
+  "version": "0.0.1",
+  "description": "Share Vuex mutations across Electron processes using a ContextBridge",
+  "main": "./dist/index.js",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "prebuild": "rm -rf dist && mkdir dist",
+    "build": "babel src -d dist",
+    "watch": "babel src -d dist --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akett/vuex-electron-bridge.git"
+  },
+  "author": "Andy Crockett",
+  "license": "MIT",
+  "homepage": "https://github.com/akett/vuex-electron-bridge#readme",
+  "devDependencies": {
+    "@babel/cli": ">=7.0.0",
+    "@babel/core": ">=7.17.5",
+    "@babel/plugin-proposal-export-default-from": ">=7.18.6",
+    "@babel/plugin-proposal-throw-expressions": ">=7.18.6",
+    "@babel/preset-env": ">=7.0.0",
+    "core-js": ">=3.21.1",
+    "electron": ">=12",
+    "electron-store": ">=2.0.0",
+    "vue": ">=2",
+    "vuex": ">=3"
+  },
+  "dependencies": {
+    "deepmerge": ">=2.1.1"
+  },
+  "peerDependencies": {
+    "electron": ">=12",
+    "electron-store": ">=2.0.0",
+    "vuex": ">=3"
+  },
+  "peerDependenciesMeta": {
+    "electron": {
+      "optional": false
+    },
+    "electron-store": {
+      "optional": true
+    },
+    "vuex": {
+      "optional": false
+    }
+  }
+}
