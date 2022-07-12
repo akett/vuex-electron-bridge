@@ -62,7 +62,7 @@ import { app } from "electron"
 import store from "./path/to/your/store"
 import VuexBridge from "vuex-electron-bridge"
 
-const bridge = new VuexBridge.Bridge()
+const bridge = VuexBridge.createBridge()
 
 app.on('ready', () => {
   bridge.mount(store)
@@ -75,10 +75,10 @@ app.on('ready', () => {
 // [preload].js
 import VuexBridge from "vuex-electron-bridge"
 
-VuexBridge.expose()
+VuexBridge.exposeBridge()
 
 // you may need to use require //
-require("vuex-electron-bridge").expose()
+require("vuex-electron-bridge").exposeBridge()
 ```
 
 Congratulations, you can now share commits across processes!
@@ -154,15 +154,18 @@ you may see performance benefits from clever usage of `localCommit()`.
 
 ## API
 
-### Class `Bridge()`
+### Function `createBridge()` or `createBridge( store, <object>[options] )`
 
-Creates a new instance of the Bridge which will broker mutations from renderers and handle state persistence. The
-instance needs to be mounted, either immediately or in `app.on('ready')`.
+Returns a new `Bridge` instance which will broker mutations from renderers and handle state persistence. Passing your
+store to `createBridge` will immediately mount the bridge. Omitting your store requires you to use `mount()` at some
+later point, such as in `app.on('ready')`.
 
-- `mount( store, <object>[options] )` - Mounts Vuex to the Bridge with your choice of [options](#Options).
+The returned `Bridge` instance has the following methods:
+
+- `mount( store, <object>[options] )` - Mounts your store to the Bridge with your choice of [options](#Options).
 - `unmount()` - Destroys the bridge and attempts to persist state.
 
-### Function `expose( <string>bridgeName | <object>[options] )`
+### Function `exposeBridge( <string>bridgeName | <object>[options] )`
 
 Call in your preload script to expose `Bridge()` to your renderers. Accepts a string or [options](#Options) object.
 
@@ -176,13 +179,15 @@ following methods:
 
 ## Options
 
-`vuex-electron-bridge` is highly configurable, but works out of the box without configuration. If you need to pass a lot
-of options, consider creating a `options.js` file (or similar) that exports your options object. As there are three
-places in which options can be passed, this will make your life a bit easier.
+`vuex-electron-bridge` has state persistence disabled by default. If you simply need to enable persistence, skip to
+the [Bridge Options](#Bridge-Options). If you need to pass a lot of options, consider creating an `options.js`
+file (or similar) that exports your options object. As there are three places in which options can be passed, this will
+make your life a bit easier.
 
 ### Shared Options
 
-The following must be passed to `Bridge.mount()`, `expose()` and `createPlugin()`, if you decide to alter them.
+Currently just the one - if you change this it must be passed to
+`createPlugin()`, `exposeBridge()`, and either `createBridge()` or `Bridge.mount()`.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -190,27 +195,28 @@ The following must be passed to `Bridge.mount()`, `expose()` and `createPlugin()
 
 ### Plugin Options
 
-Can be passed to `createPlugin( [options] )`
+Options specific to the `Plugin` instance. Pass these to `createPlugin( [options] )`
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | warnAboutCommit | boolean | `true` | Set to `false` to disable logging a warning when `commit()` is used. |
-| moduleName | string | `'__vuex_bridge'` | The name of the module added to your state |
-| actionName | string | `'__vuex_bridge_SET_READY'` | The action/mutation name fired when a renderer finishes hydration and is ready for commits. |
-| getterName | string | `'vuexBridgeIsReady'` | The getter name for hydration status. True if hydrated, false if awaiting hydration. |
+| allowHelperModule | boolean | `true` | Set to `false` to disable adding the [helper module](./src/helper-module.js) to your store. (Don't worry... the module is excluded from persistence) |
+| moduleName | string | `'__vuex_bridge'` | Renames the helper module |
+| getterPrefix | string | `'vuex'` | Prefix for the getters provided by the helper module |
 
 ### Bridge Options
 
-Can be passed to `Bridge.mount(store, [options])`
+Options specific to the `Bridge` instance. Pass these to either `Bridge.mount(store, [options])`
+or `createBridge(store, [options])`
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | persist | boolean | `false` | Toggles state persistence. |
-| persistThrottle | int (milliseconds) | `500` | Throttles state persistence to the storageProvider. 0 to disable, increase to reduce I/O load.  |
+| persistThrottle | int (milliseconds) | `1000` | Throttles state persistence. 0 to disable, increase to reduce I/O load.  |
 | storageOptions | object | `{ name: 'vuex' }`| Accepts all [electron-store](https://github.com/sindresorhus/electron-store) options |
 | storageKey | string | `'state'` | Top-level JSON key name used to persist state when using `electron-store` |
 | storageTestKey | string | `'test'` | Top-level JSON key name used to test save/load functionality of `electron-store`. (see option storageTester) |
-| storageProvider | Instance | null | Accepts an instance of your own storage provider. storageOptions are ignored when using this option.  |
+| storageProvider | Instance | null | Accepts an instance of your own storage provider. `storageOptions` are ignored when using your own provider. `storageKey` and `storageTestKey` are only used by the Getter/Setter/Tester functions. |
 | storageGetter | Function | See definition in [options.js](./src/options.js) | Loads state using your custom storage provider |
 | storageSetter | Function | See definition in [options.js](./src/options.js) | Saves state using your custom storage provider |
 | storageTester | Function | See definition in [options.js](./src/options.js) | Tests your storage provider for basic functionality |

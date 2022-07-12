@@ -1,14 +1,13 @@
 export default (isRenderer, options) => ({
   state: {
-    __loaded: !isRenderer,
+    __isHydrated: false,
     __isRenderer: isRenderer,
   },
   getters: {
-    [options.getterName]: (state) => state.__loaded,
+    [options.getterPrefix + 'IsHydrated']: (state) => state.__isHydrated,
+    [options.getterPrefix + 'IsRenderer']: (state) => state.__isRenderer,
   },
   mutations: {
-    [options.moduleName + '__SET_READY']: (state, payload) => {
-      state.__loaded = payload;
-    },
+    [options.moduleName + '_SET_IS_HYDRATED']: (state, payload) => state.__isHydrated = payload,
   },
 })

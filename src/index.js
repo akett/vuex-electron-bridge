@@ -1,6 +1,14 @@
-module.exports = {
-  Bridge: require("./bridge.js").default,
-  expose: require("./preload.js").default,
-  createPlugin: require("./plugin.js").default,
-  defaultOptions: require("./options.js").options,
+import createBridge from "./bridge"
+import exposeBridge from "./preload"
+import createPlugin from "./plugin"
+import options from "./options"
+
+const VuexElectronBridge = { createBridge, exposeBridge, createPlugin, options }
+
+export {
+  VuexElectronBridge as default,
+  createBridge,
+  exposeBridge,
+  createPlugin,
+  options,
 }

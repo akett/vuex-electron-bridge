@@ -1,7 +1,7 @@
 import { loadOptions } from "./options"
-import { error, isObject } from "./utils";
+import { isObject } from "./utils";
 
-export default (options) => {
+const exposeBridge = (options) => {
   const { contextBridge, ipcRenderer } = require("electron")
 
   options = loadOptions(isObject(options) ? options : { bridgeName: options })
@@ -11,4 +11,8 @@ export default (options) => {
     [options.ipc.notify_main]: (payload) => ipcRenderer.invoke(options.ipc.notify_main, payload),
     [options.ipc.notify_renderers]: (handler) => ipcRenderer.on(options.ipc.notify_renderers, handler),
   })
+}
+
+export {
+  exposeBridge as default,
 }

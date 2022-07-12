@@ -5,15 +5,13 @@ function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" =
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports["default"] = exports.Plugin = void 0;
-
-var _utils = require("./utils");
-
-var _options = require("./options");
+exports["default"] = void 0;
 
 var _vuex4_override = _interopRequireDefault(require("./vuex4_override"));
 
-var _helperModule = _interopRequireDefault(require("./helper-module"));
+var _options = require("./options");
+
+var _utils = require("./utils");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
 
@@ -30,55 +28,68 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); Object.defineProperty(Constructor, "prototype", { writable: false }); return Constructor; }
 
 /**
- * This file will be run on both the main process and renderers
- * to provide the shareCommit method to your Vuex Store.
+ * This file runs on the main process and coordinates
+ * mutation sharing between processes and state persistence.
  *
- * Notes:
- * Commits are processed immediately on the caller (for both the main process and renderers).
- * broker.js should be executed after this file has run, with it's own Vuex override for the main process.
+ * NOTE: plugin.js should have already been loaded in the main process Vuex Store by this point.
  */
-var Plugin = /*#__PURE__*/function () {
-  function Plugin(options, store) {
-    _classCallCheck(this, Plugin);
+var Broker = /*#__PURE__*/function () {
+  function Broker(ipcMain) {
+    _classCallCheck(this, Broker);
 
-    this.isRenderer = typeof window !== 'undefined';
-    this.store = store;
-    this.options = (0, _options.loadOptions)(options);
-    this.bridge = this.isRenderer ? window[this.options.bridgeName] : null;
+    this.ipc = ipcMain;
+    this.store = {};
+    this.options = {};
+    this.connections = [];
+    this.storage = null;
+    this._persisting = false;
+  }
 
-    if (this.isRenderer && (!(0, _utils.isObject)(this.bridge) || (0, _utils.isUndefined)(this.bridge[this.options.ipc.connect]))) {
-      throw (0, _utils.error)('Unable to access contextBridge methods. Ensure Context Isolation is enabled, or verify "bridgeName" options (see docs).');
+  _createClass(Broker, [{
+    key: "setup",
+    value: function setup(store) {
+      var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+      this.store = store;
+      this.setOptions(options || this.options);
+      this.overrideVuex();
+      this.createStorage();
+      this.checkStorage();
+      this.hydrateFromStorage();
+      this.registerListeners();
     }
-
-    this.overrideVuex();
-    this.addHelperModule();
-  } // Override Vuex.commit with our method and make it available in Vuex.dispatch contexts
-
-
-  _createClass(Plugin, [{
+  }, {
+    key: "teardown",
+    value: function teardown() {
+      this.removeListeners();
+      this.saveState();
+      this.connections = [];
+    }
+  }, {
+    key: "setOptions",
+    value: function setOptions(options) {
+      this.options = (0, _options.loadOptions)(options);
+    }
+  }, {
     key: "overrideVuex",
     value: function overrideVuex() {
       var _this = this;
 
-      // Preserve original commit
-      this.store.localCommit = this.store.commit; // Override commit() to warn of possibly unintended usage
-
-      this.store.commit = function (type, payload, options) {
-        _this.store.localCommit(type, payload, options);
-
-        if (_this.options.warnAboutCommit) {
-          (0, _utils.warn)("'".concat(type, "' used 'commit()' instead of 'shareCommit()'. Please, read the docs before disabling this warning."));
-        }
-      }; // Contextualize shareCommit
-
-
+      // Contextualize shareCommit for the main process, using a null sender ID.
       var shareCommit = /*#__PURE__*/function () {
         var _ref = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(type, payload, options) {
           return _regeneratorRuntime().wrap(function _callee$(_context) {
             while (1) {
               switch (_context.prev = _context.next) {
                 case 0:
-                  return _context.abrupt("return", _this.shareCommit(type, payload, options));
+                  return _context.abrupt("return", _this.broadcastCommit({
+                    sender: {
+                      id: null
+                    }
+                  }, {
+                    type: type,
+                    payload: payload,
+                    options: options
+                  }));
 
                 case 1:
                 case "end":
@@ -91,164 +102,176 @@ var Plugin = /*#__PURE__*/function () {
         return function shareCommit(_x, _x2, _x3) {
           return _ref.apply(this, arguments);
         };
-      }(); // Provide shareCommit to global Vuex instance and Vuex.dispatch
+      }(); // Override main process Vuex.dispatch context with new shareCommit
 
 
-      new _vuex4_override["default"]().override(this.store, shareCommit, this.isRenderer);
+      new _vuex4_override["default"]().override(this.store, shareCommit, false);
     }
-    /**
-     * Shares commits with other processes.
-     * Use 'await' to know *roughly* when all other processes have received the commit
-     */
-
   }, {
-    key: "shareCommit",
-    value: function () {
-      var _shareCommit = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee2(type, payload, options) {
-        return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-          while (1) {
-            switch (_context2.prev = _context2.next) {
-              case 0:
-                // Immediately commit to self
-                this.store.localCommit(type, payload, options); // Send commit to main
+    key: "loadFilter",
+    value: function loadFilter(filter, name) {
+      if (!filter) return null;
 
-                _context2.prev = 1;
-                return _context2.abrupt("return", this.bridge[this.options.ipc.notify_main]({
-                  type: type,
-                  payload: payload,
-                  options: options
-                }));
-
-              case 5:
-                _context2.prev = 5;
-                _context2.t0 = _context2["catch"](1);
-                throw (0, _utils.error)("Error in shareCommit(): ".concat(_context2.t0.toString()), {
-                  type: type,
-                  payload: payload,
-                  options: options
-                });
-
-              case 8:
-              case "end":
-                return _context2.stop();
-            }
-          }
-        }, _callee2, this, [[1, 5]]);
-      }));
-
-      function shareCommit(_x4, _x5, _x6) {
-        return _shareCommit.apply(this, arguments);
+      if (filter instanceof Array) {
+        return this.filterInArray(filter);
+      } else if (typeof filter === "function") {
+        return filter;
       }
 
-      return shareCommit;
-    }() // handles commits shared with renderer
-
+      throw (0, _utils.error)("Filter \"".concat(name, "\" should be Array or Function."));
+    }
   }, {
-    key: "receiveCommit",
-    value: function receiveCommit(event, _ref2) {
+    key: "filterInArray",
+    value: function filterInArray(list) {
+      return function (mutation) {
+        return list.includes(mutation.type);
+      };
+    }
+  }, {
+    key: "createStorage",
+    value: function createStorage() {
+      if (!this.options.persist) return;
+
+      if (this.options.storageProvider === null) {
+        try {
+          this.options.storageProvider = new (require("electron-store"))(this.options.storageOptions);
+        } catch (e) {
+          if (e.code !== 'MODULE_NOT_FOUND') throw (0, _utils.error)(e.toString());
+          this.options.persist = false;
+          (0, _utils.warn)("Could not load module \"electron-store\". Is it installed?", "\"options.persist\" has been disabled.");
+          return;
+        }
+      }
+
+      this.storage = this.options.storageProvider;
+      this.whitelist = this.loadFilter(this.options.whitelist, "whitelist");
+      this.blacklist = this.loadFilter(this.options.blacklist, "blacklist");
+    }
+  }, {
+    key: "checkStorage",
+    value: function checkStorage() {
+      if (!this.options.persist) return;
+
+      try {
+        this.options.storageTester(this);
+      } catch (e) {
+        this.options.persist = false;
+        (0, _utils.warn)("Storage Provider is not valid. Please, read the docs.", "\"options.persist\" has been disabled.", "Error: ".concat(e.toString()));
+      }
+    }
+  }, {
+    key: "hydrateFromStorage",
+    value: function hydrateFromStorage() {
+      if (!this.options.persist) return;
+      var state = this.getState();
+
+      if (state) {
+        this.store.replaceState((0, _utils.merge)(this.store.state, state, {
+          arrayMerge: _utils.combineMerge
+        }));
+      } // Indicate that state was hydrated
+
+
+      if (this.options.allowHelperModule) {
+        this.store.localCommit(this.options.moduleName + '_SET_IS_HYDRATED', true);
+      }
+    }
+  }, {
+    key: "filteredState",
+    value: function filteredState() {
+      var _this2 = this;
+
+      var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      return !this.options.allowHelperModule ? state : Object.keys(state).reduce(function (o, k) {
+        return k !== _this2.options.moduleName ? (o[k] = state[k], o) : o;
+      }, {});
+    }
+  }, {
+    key: "getState",
+    value: function getState() {
+      if (!this.options.persist) return {};
+      return this.options.storageGetter(this);
+    }
+  }, {
+    key: "saveState",
+    value: function saveState() {
+      if (!this.options.persist) return;
+      this.options.storageSetter(this, this.filteredState(this.store.state));
+      this._persisting = false;
+    }
+  }, {
+    key: "queueSave",
+    value: function queueSave() {
+      var _this3 = this;
+
+      if (!this.options.persist || this._persisting) return;
+      if (!this.options.persistThrottle > 0) return this.saveState();
+      this._persisting = true;
+      setTimeout(function () {
+        return _this3.saveState();
+      }, this.options.persistThrottle);
+    }
+  }, {
+    key: "registerListeners",
+    value: function registerListeners() {
+      var _this4 = this;
+
+      this.ipc.handle(this.options.ipc.connect, function (e) {
+        return _this4.hydrateRenderer(e);
+      });
+      this.ipc.handle(this.options.ipc.notify_main, function (e, c) {
+        return _this4.broadcastCommit(e, c);
+      });
+    }
+  }, {
+    key: "removeListeners",
+    value: function removeListeners() {
+      this.ipc.removeHandler(this.options.ipc.connect);
+      this.ipc.removeHandler(this.options.ipc.notify_main);
+    }
+  }, {
+    key: "hydrateRenderer",
+    value: function hydrateRenderer(event) {
+      var _this5 = this;
+
+      // save a reference to the renderer (webContents)
+      this.connections[event.sender.id] = event.sender; // delete reference when renderer is destroyed
+
+      event.sender.on('destroyed', function () {
+        return delete _this5.connections[event.sender.id];
+      }); // return the state object to the renderer for hydration
+
+      return {
+        state: JSON.stringify(this.filteredState(this.store.state))
+      };
+    }
+  }, {
+    key: "broadcastCommit",
+    value: function broadcastCommit(event, _ref2) {
+      var _this6 = this;
+
       var type = _ref2.type,
           payload = _ref2.payload,
           options = _ref2.options;
-      this.store.localCommit(type, payload, options);
+      if (this.blacklist && this.blacklist(type)) return;
+      if (this.whitelist && !this.whitelist(type)) return; // run the commit locally
+
+      this.store.localCommit(type, payload, options); // queue save state
+
+      this.queueSave(); // broadcast the commit to renderers (excluding the sender)
+
+      this.connections.forEach(function (webContents) {
+        if (webContents.id === event.sender.id) return;
+        webContents.send(_this6.options.ipc.notify_renderers, {
+          type: type,
+          payload: payload,
+          options: options
+        });
+      });
     }
-  }, {
-    key: "addHelperModule",
-    value: function addHelperModule() {
-      // helper module for a simple boolean getter indicating hydration status
-      // getter can be used to delay logic which relies on current state
-      // getter will be false until the renderer is hydrated with the state from the main process
-      if (!this.options.allowHelperModule) return;
-      this.store.registerModule(this.options.moduleName, (0, _helperModule["default"])(this.isRenderer, this.options));
-    }
-  }, {
-    key: "hydrate",
-    value: function () {
-      var _hydrate = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee3() {
-        var _this2 = this;
-
-        var connection;
-        return _regeneratorRuntime().wrap(function _callee3$(_context3) {
-          while (1) {
-            switch (_context3.prev = _context3.next) {
-              case 0:
-                if (this.isRenderer) {
-                  _context3.next = 2;
-                  break;
-                }
-
-                return _context3.abrupt("return");
-
-              case 2:
-                _context3.next = 4;
-                return this.bridge[this.options.ipc.connect]();
-
-              case 4:
-                connection = _context3.sent;
-
-                // Merge and replace renderer state with main state
-                if (connection && connection.state) {
-                  this.store.replaceState((0, _utils.merge)(this.store.state, JSON.parse(connection.state)));
-                } // Indicate that state hydrated
-
-
-                if (this.options.allowHelperModule) {
-                  this.store.localCommit(this.options.moduleName + '_SET_IS_HYDRATED', true);
-                } // Listen for shared commits
-
-
-                this.bridge[this.options.ipc.notify_renderers](function (event, data) {
-                  return _this2.receiveCommit(event, data);
-                });
-
-              case 8:
-              case "end":
-                return _context3.stop();
-            }
-          }
-        }, _callee3, this);
-      }));
-
-      function hydrate() {
-        return _hydrate.apply(this, arguments);
-      }
-
-      return hydrate;
-    }()
   }]);
 
-  return Plugin;
+  return Broker;
 }();
 
-exports.Plugin = Plugin;
-
-var createPlugin = function createPlugin() {
-  var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-  return /*#__PURE__*/function () {
-    var _ref3 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee4(store) {
-      var plugin;
-      return _regeneratorRuntime().wrap(function _callee4$(_context4) {
-        while (1) {
-          switch (_context4.prev = _context4.next) {
-            case 0:
-              plugin = new Plugin(options, store);
-              _context4.next = 3;
-              return plugin.hydrate();
-
-            case 3:
-              return _context4.abrupt("return", _context4.sent);
-
-            case 4:
-            case "end":
-              return _context4.stop();
-          }
-        }
-      }, _callee4);
-    }));
-
-    return function (_x7) {
-      return _ref3.apply(this, arguments);
-    };
-  }();
-};
-
-exports["default"] = createPlugin;
+exports["default"] = Broker;

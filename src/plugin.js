@@ -9,7 +9,7 @@ import helperModule from "./helper-module"
  *
  * Notes:
  * Commits are processed immediately on the caller (for both the main process and renderers).
- * bridge.js will be executed after this file has run, with it's own Vuex override for the main process.
+ * broker.js should be executed after this file has run, with it's own Vuex override for the main process.
  */
 class Plugin {
 
@@ -20,7 +20,8 @@ class Plugin {
     this.bridge     = this.isRenderer ? window[this.options.bridgeName] : null;
 
     if (this.isRenderer && (!isObject(this.bridge) || isUndefined(this.bridge[this.options.ipc.connect]))) {
-      throw error('Unable to access contextBridge methods. Ensure Context Isolation is enabled, or verify "bridgeName" options (see docs).')
+      throw error(
+        'Unable to access contextBridge methods. Ensure Context Isolation is enabled, or verify "bridgeName" options (see docs).')
     }
 
     this.overrideVuex();
@@ -92,9 +93,9 @@ class Plugin {
       this.store.replaceState(merge(this.store.state, JSON.parse(connection.state)))
     }
 
-    // Indicate that server state was received and imported
+    // Indicate that state hydrated
     if (this.options.allowHelperModule) {
-      this.store.localCommit(this.options.moduleName + '__SET_READY', true)
+      this.store.localCommit(this.options.moduleName + '_SET_IS_HYDRATED', true)
     }
 
     // Listen for shared commits
@@ -102,7 +103,12 @@ class Plugin {
   }
 }
 
-export default (options = {}) => async (store) => {
+const createPlugin = (options = {}) => async (store) => {
   const plugin = new Plugin(options, store)
   return await plugin.hydrate();
+}
+
+export {
+  Plugin,
+  createPlugin as default,
 }

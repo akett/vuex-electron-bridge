@@ -1,11 +1,10 @@
 "use strict";
 
-var _require = require("./utils"),
-    isObject = _require.isObject,
-    isUndefined = _require.isUndefined,
-    isString = _require.isString;
-
-var defaults = {
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.loadOptions = exports["default"] = void 0;
+var options = {
   // enables/disables persisting state using the storage provider
   persist: false,
   // milliseconds to wait before persisting state; 0 to disable. higher values reduce IO load.
@@ -24,65 +23,72 @@ var defaults = {
   storageProvider: null,
   // should not be overridden unless using a custom storage provider.
   // should always return an object.
-  storageGetter: function storageGetter(bridge) {
-    return bridge.storage.get(bridge.options.storageKey);
+  storageGetter: function storageGetter(broker) {
+    return broker.storage.get(broker.options.storageKey);
   },
   // should not be overridden unless using a custom storage provider.
   // should persist the state object.
-  storageSetter: function storageSetter(bridge) {
-    if (!bridge.options.persist) return;
-    bridge.storage.set(bridge.options.storageKey, bridge.store.state);
+  storageSetter: function storageSetter(broker) {
+    var rootState = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    if (!broker.options.persist) return;
+    broker.storage.set(broker.options.storageKey, rootState);
   },
   // should not be overridden unless using a custom storage provider.
   // should perform a one-time functionality test of the storage provider.
   // will be wrapped in a try/catch for you.
-  storageTester: function storageTester(bridge) {
-    bridge.storage.set(bridge.options.storageTestKey, bridge.options.storageTestKey);
-    bridge.storage.get(bridge.options.storageTestKey);
-    bridge.storage["delete"](bridge.options.storageTestKey);
+  storageTester: function storageTester(broker) {
+    broker.storage.set(broker.options.storageTestKey, broker.options.storageTestKey);
+    broker.storage.get(broker.options.storageTestKey);
+    broker.storage["delete"](broker.options.storageTestKey);
   },
   // the following only need to be changed if a naming conflict exists with your application
-  // the name of the object exposed by the contextBridge (i.e. window.__evb_)
+  // the name of the object exposed by the contextBridge (i.e. window.__vuex_bridge_)
   bridgeName: '__vuex_bridge_',
   // warn about usage of original Vuex.commit(). (Improper usage can cause a state mismatch!)
   warnAboutCommit: true,
-  // disable adding the helper module to your store.
+  // to disable adding the helper module to your store.
   allowHelperModule: true,
-  // the name for the module that will be added to your state object (i.e. store.state.__evb)
+  // the name for the helper module added to your store (i.e. store.state.__vuex_bridge_)
   moduleName: '__vuex_bridge_',
-  // the name used for the bridge ready status getter (i.e. store.getters.evBridgeIsReady)
-  getterName: 'vuexBridgeIsReady'
+  // prefix for getters provided by helper store (e.g. getters.vuexIsHydrated, getters.vuexIsRenderer)
+  getterPrefix: 'vuex'
 };
-module.exports = {
-  options: defaults,
-  loadOptions: function loadOptions() {
-    var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-    // passing options as a non-object results in complete fallback to the default options.
-    if (!isObject(options)) options = Object.assign({}, defaults); // validate options, fallback to defaults
+exports["default"] = options;
 
-    if (isUndefined(options.warnAboutCommit)) options.warnAboutCommit = defaults.warnAboutCommit;
-    if (isUndefined(options.allowHelperModule)) options.allowHelperModule = defaults.allowHelperModule;
-    if (!isString(options.bridgeName)) options.bridgeName = defaults.bridgeName;
-    if (!isString(options.moduleName)) options.moduleName = defaults.moduleName;
-    if (!isString(options.getterName)) options.getterName = defaults.getterName;
-    if (isUndefined(options.persist)) options.persist = defaults.persist;
-    if (isUndefined(options.persistThrottle)) options.persistThrottle = defaults.persistThrottle;
-    if (!isObject(options.storageOptions)) options.storageOptions = defaults.storageOptions;
-    if (!isString(options.storageKey)) options.storageKey = defaults.storageKey;
-    if (!isString(options.storageTestKey)) options.storageTestKey = defaults.storageTestKey;
-    if (isUndefined(options.storageProvider)) options.storageProvider = defaults.storageProvider;
-    if (isUndefined(options.storageGetter)) options.storageGetter = defaults.storageGetter;
-    if (isUndefined(options.storageSetter)) options.storageSetter = defaults.storageSetter;
-    if (isUndefined(options.storageTester)) options.storageTester = defaults.storageTester; // enforce storageOptions when using default storage
+var _require = require("./utils"),
+    isObject = _require.isObject,
+    isUndefined = _require.isUndefined,
+    isString = _require.isString;
 
-    if (options.persist && !options.storageProvider) {
-      if (!isString(options.storageOptions.name)) options.storageOptions.name = defaults.storageOptions.name;
-    }
+var loadOptions = function loadOptions() {
+  var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  // passing options as a non-object results in complete fallback to the default options.
+  if (!isObject(opts)) opts = Object.assign({}, options); // validate options, fallback to defaults
 
-    options.ipc = {};
-    options.ipc.connect = options.bridgeName + ':connect';
-    options.ipc.notify_main = options.bridgeName + ':notify_main';
-    options.ipc.notify_renderers = options.bridgeName + ':notify_renderers';
-    return options;
+  if (isUndefined(opts.warnAboutCommit)) opts.warnAboutCommit = options.warnAboutCommit;
+  if (isUndefined(opts.allowHelperModule)) opts.allowHelperModule = options.allowHelperModule;
+  if (!isString(opts.bridgeName)) opts.bridgeName = options.bridgeName;
+  if (!isString(opts.moduleName)) opts.moduleName = options.moduleName;
+  if (!isString(opts.getterPrefix)) opts.getterPrefix = options.getterPrefix;
+  if (isUndefined(opts.persist)) opts.persist = options.persist;
+  if (isUndefined(opts.persistThrottle)) opts.persistThrottle = options.persistThrottle;
+  if (!isObject(opts.storageOptions)) opts.storageOptions = options.storageOptions;
+  if (!isString(opts.storageKey)) opts.storageKey = options.storageKey;
+  if (!isString(opts.storageTestKey)) opts.storageTestKey = options.storageTestKey;
+  if (isUndefined(opts.storageProvider)) opts.storageProvider = options.storageProvider;
+  if (isUndefined(opts.storageGetter)) opts.storageGetter = options.storageGetter;
+  if (isUndefined(opts.storageSetter)) opts.storageSetter = options.storageSetter;
+  if (isUndefined(opts.storageTester)) opts.storageTester = options.storageTester; // enforce storageOptions when using default storage
+
+  if (opts.persist && !opts.storageProvider) {
+    if (!isString(opts.storageOptions.name)) opts.storageOptions.name = options.storageOptions.name;
   }
+
+  opts.ipc = {};
+  opts.ipc.connect = opts.bridgeName + ':connect';
+  opts.ipc.notify_main = opts.bridgeName + ':notify_main';
+  opts.ipc.notify_renderers = opts.bridgeName + ':notify_renderers';
+  return opts;
 };
+
+exports.loadOptions = loadOptions;

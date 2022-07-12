@@ -11,7 +11,7 @@ var _utils = require("./utils");
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-var _default = function _default(options) {
+var exposeBridge = function exposeBridge(options) {
   var _contextBridge$expose;
 
   var _require = require("electron"),
@@ -30,4 +30,4 @@ var _default = function _default(options) {
   }), _contextBridge$expose));
 };
 
-exports["default"] = _default;
+exports["default"] = exposeBridge;

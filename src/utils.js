@@ -41,10 +41,10 @@ export const isPromise = (val) => {
 }
 
 export const warn = (message, ...args) => {
-  console.log('[EVB]', message, ...args)
+  console.log('[vuex-electron-bridge]', message, ...args)
 }
 
 export const error = (message) => {
-  return new Error("[EVB] " + message)
+  return new Error("[vuex-electron-bridge] " + message)
 }
 

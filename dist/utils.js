@@ -71,13 +71,13 @@ var warn = function warn(message) {
     args[_key - 1] = arguments[_key];
   }
 
-  (_console = console).log.apply(_console, ['[EVB]', message].concat(args));
+  (_console = console).log.apply(_console, ['[vuex-electron-bridge]', message].concat(args));
 };
 
 exports.warn = warn;
 
 var error = function error(message) {
-  return new Error("[EVB] " + message);
+  return new Error("[vuex-electron-bridge] " + message);
 };
 
 exports.error = error;
