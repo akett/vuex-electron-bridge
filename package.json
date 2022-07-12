@@ -1,6 +1,6 @@
 {
   "name": "vuex-electron-bridge",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Share Vuex mutations across Electron processes using a ContextBridge",
   "main": "./dist/index.js",
   "sideEffects": false,
@@ -20,24 +20,22 @@
   "license": "MIT",
   "homepage": "https://github.com/akett/vuex-electron-bridge#readme",
   "devDependencies": {
-    "@babel/cli": ">=7.0.0",
-    "@babel/core": ">=7.17.5",
-    "@babel/plugin-proposal-export-default-from": ">=7.18.6",
-    "@babel/plugin-proposal-throw-expressions": ">=7.18.6",
-    "@babel/preset-env": ">=7.0.0",
-    "core-js": ">=3.21.1",
+    "@babel/cli": ">=7",
+    "@babel/core": ">=7",
+    "@babel/plugin-proposal-export-default-from": ">=7",
+    "@babel/plugin-proposal-throw-expressions": ">=7",
+    "@babel/preset-env": ">=7",
     "electron": ">=12",
-    "electron-store": ">=2.0.0",
-    "vue": ">=2",
-    "vuex": ">=3"
+    "electron-store": ">=2",
+    "vuex": ">=4"
   },
   "dependencies": {
-    "deepmerge": ">=2.1.1"
+    "deepmerge": ">=2"
   },
   "peerDependencies": {
     "electron": ">=12",
-    "electron-store": ">=2.0.0",
-    "vuex": ">=3"
+    "electron-store": ">=2",
+    "vuex": ">=4"
   },
   "peerDependenciesMeta": {
     "electron": {

@@ -1,5 +1,5 @@
 import { loadOptions } from "./options"
-import { isObject } from "./utils";
+import { error, isObject } from "./utils";
 
 export default (options) => {
   const { contextBridge, ipcRenderer } = require("electron")

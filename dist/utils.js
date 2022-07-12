@@ -7,21 +7,27 @@ exports.warn = exports.merge = exports.isUndefined = exports.isString = exports.
 
 var _deepmerge = _interopRequireDefault(require("deepmerge"));
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "default": obj }; }
 
-const merge = _deepmerge.default;
+function _typeof(obj) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) { return typeof obj; } : function (obj) { return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }, _typeof(obj); }
+
+var merge = _deepmerge["default"];
 exports.merge = merge;
 
-const combineMerge = (target, source, options) => {
-  const emptyTarget = value => Array.isArray(value) ? [] : {};
+var combineMerge = function combineMerge(target, source, options) {
+  var emptyTarget = function emptyTarget(value) {
+    return Array.isArray(value) ? [] : {};
+  };
 
-  const clone = (value, options) => merge(emptyTarget(value), value, options);
+  var clone = function clone(value, options) {
+    return merge(emptyTarget(value), value, options);
+  };
 
-  const destination = target.slice();
+  var destination = target.slice();
   source.forEach(function (e, i) {
     if (typeof destination[i] === "undefined") {
-      const cloneRequested = options.clone !== false;
-      const shouldClone = cloneRequested && options.isMergeableObject(e);
+      var cloneRequested = options.clone !== false;
+      var shouldClone = cloneRequested && options.isMergeableObject(e);
       destination[i] = shouldClone ? clone(e, options) : e;
     } else if (options.isMergeableObject(e)) {
       destination[i] = merge(target[i], e, options);
@@ -34,37 +40,43 @@ const combineMerge = (target, source, options) => {
 
 exports.combineMerge = combineMerge;
 
-const isUndefined = val => {
+var isUndefined = function isUndefined(val) {
   return typeof val === 'undefined';
 };
 
 exports.isUndefined = isUndefined;
 
-const isObject = obj => {
-  return obj !== null && typeof obj === 'object';
+var isObject = function isObject(obj) {
+  return obj !== null && _typeof(obj) === 'object';
 };
 
 exports.isObject = isObject;
 
-const isString = obj => {
+var isString = function isString(obj) {
   return typeof obj === 'string';
 };
 
 exports.isString = isString;
 
-const isPromise = val => {
+var isPromise = function isPromise(val) {
   return val && typeof val.then === 'function';
 };
 
 exports.isPromise = isPromise;
 
-const warn = (message, ...args) => {
-  console.log('[EVB]', message, ...args);
+var warn = function warn(message) {
+  var _console;
+
+  for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+    args[_key - 1] = arguments[_key];
+  }
+
+  (_console = console).log.apply(_console, ['[EVB]', message].concat(args));
 };
 
 exports.warn = warn;
 
-const error = message => {
+var error = function error(message) {
   return new Error("[EVB] " + message);
 };
 

@@ -1,11 +1,12 @@
 # Vuex Electron Bridge
 
-Share Vuex mutations across Electron processes using a [ContextBridge](https://www.electronjs.org/docs/latest/api/context-bridge).
+Share Vuex mutations across Electron processes using
+a [ContextBridge](https://www.electronjs.org/docs/latest/api/context-bridge).
 
 ## Features
 
-- **Modern Electron** - Works with (or
-  without) [Context Isolation](https://www.electronjs.org/docs/latest/tutorial/context-isolation)
+- **Modern Electron** - Works
+  with [Context Isolation](https://www.electronjs.org/docs/latest/tutorial/context-isolation)
   and [Process Sandboxing](https://www.electronjs.org/docs/latest/tutorial/sandbox).
 - **Shared Mutations** - Syncs mutations across all processes, including main.
 - **Persisted State** - Permanently persist state using your choice of storage.
@@ -29,14 +30,13 @@ sharing, and the broker ensures that the sharer does not receive a duplicate.
 
 ## Installation
 
-*Requires Electron 12 or later. Requires
-a [preload script](https://www.electronjs.org/docs/latest/tutorial/tutorial-preload). Currently supports Vuex 4.*
-
 `npm install vuex-electron-bridge`
 
-and to persist state (optional)
+Note: *Requires Electron 12 or later.
+Requires [Context Isolation](https://www.electronjs.org/docs/latest/tutorial/context-isolation) and
+a [preload script](https://www.electronjs.org/docs/latest/tutorial/tutorial-preload). Only supports Vuex 4.*
 
-`npm install electron-store`
+If you plan to persist state,  `npm install electron-store` *(optional, can supply your own)*
 
 ## Setup
 
@@ -168,19 +168,21 @@ Call in your preload script to expose `Bridge()` to your renderers. Accepts a st
 
 ### Function `createPlugin( <object>[options] )`
 
-Returns a plugin to add to your Vuex store with any [options](#Options). The plugin extends the Vuex API with the following
-methods:
+Returns a plugin to add to your Vuex store with any [options](#Options). The plugin extends the Vuex API with the
+following methods:
 
 - `shareCommit(type, payload, options)` - Shares a mutation with other processes.
 - `localCommit(type, payload, options)` - Locally commit a mutation. Alias of `commit()`
 
 ## Options
 
-`vuex-electron-bridge` is highly configurable, but works out of the box without configuration. If you need to pass a lot of options, consider creating a `options.js` file (or similar) that exports your options object. As there are three places in which options can be passed, this will make your life a bit easier.
+`vuex-electron-bridge` is highly configurable, but works out of the box without configuration. If you need to pass a lot
+of options, consider creating a `options.js` file (or similar) that exports your options object. As there are three
+places in which options can be passed, this will make your life a bit easier.
 
 ### Shared Options
 
-The following must be passed to `Bridge.mount()`, `expose()` and `createPlugin()`, if you decide to alter them. 
+The following must be passed to `Bridge.mount()`, `expose()` and `createPlugin()`, if you decide to alter them.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |

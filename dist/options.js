@@ -1,12 +1,11 @@
 "use strict";
 
-const {
-  isObject,
-  isUndefined,
-  isString
-} = require("./utils");
+var _require = require("./utils"),
+    isObject = _require.isObject,
+    isUndefined = _require.isUndefined,
+    isString = _require.isString;
 
-const defaults = {
+var defaults = {
   // enables/disables persisting state using the storage provider
   persist: false,
   // milliseconds to wait before persisting state; 0 to disable. higher values reduce IO load.
@@ -25,22 +24,22 @@ const defaults = {
   storageProvider: null,
   // should not be overridden unless using a custom storage provider.
   // should always return an object.
-  storageGetter: bridge => {
+  storageGetter: function storageGetter(bridge) {
     return bridge.storage.get(bridge.options.storageKey);
   },
   // should not be overridden unless using a custom storage provider.
   // should persist the state object.
-  storageSetter: bridge => {
+  storageSetter: function storageSetter(bridge) {
     if (!bridge.options.persist) return;
     bridge.storage.set(bridge.options.storageKey, bridge.store.state);
   },
   // should not be overridden unless using a custom storage provider.
   // should perform a one-time functionality test of the storage provider.
   // will be wrapped in a try/catch for you.
-  storageTester: bridge => {
+  storageTester: function storageTester(bridge) {
     bridge.storage.set(bridge.options.storageTestKey, bridge.options.storageTestKey);
     bridge.storage.get(bridge.options.storageTestKey);
-    bridge.storage.delete(bridge.options.storageTestKey);
+    bridge.storage["delete"](bridge.options.storageTestKey);
   },
   // the following only need to be changed if a naming conflict exists with your application
   // the name of the object exposed by the contextBridge (i.e. window.__evb_)
@@ -56,8 +55,8 @@ const defaults = {
 };
 module.exports = {
   options: defaults,
-
-  loadOptions(options = {}) {
+  loadOptions: function loadOptions() {
+    var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     // passing options as a non-object results in complete fallback to the default options.
     if (!isObject(options)) options = Object.assign({}, defaults); // validate options, fallback to defaults
 
@@ -86,5 +85,4 @@ module.exports = {
     options.ipc.notify_renderers = options.bridgeName + ':notify_renderers';
     return options;
   }
-
 };

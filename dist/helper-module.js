@@ -3,21 +3,23 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = void 0;
+exports["default"] = void 0;
 
-var _default = (isRenderer, options) => ({
-  state: {
-    __loaded: !isRenderer,
-    __isRenderer: isRenderer
-  },
-  getters: {
-    [options.getterName]: state => state.__loaded
-  },
-  mutations: {
-    [options.moduleName + '__SET_READY']: (state, payload) => {
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+var _default = function _default(isRenderer, options) {
+  return {
+    state: {
+      __loaded: !isRenderer,
+      __isRenderer: isRenderer
+    },
+    getters: _defineProperty({}, options.getterName, function (state) {
+      return state.__loaded;
+    }),
+    mutations: _defineProperty({}, options.moduleName + '__SET_READY', function (state, payload) {
       state.__loaded = payload;
-    }
-  }
-});
+    })
+  };
+};
 
-exports.default = _default;
+exports["default"] = _default;

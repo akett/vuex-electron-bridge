@@ -20,7 +20,7 @@ class Plugin {
     this.bridge     = this.isRenderer ? window[this.options.bridgeName] : null;
 
     if (this.isRenderer && (!isObject(this.bridge) || isUndefined(this.bridge[this.options.ipc.connect]))) {
-      throw error('Unable to access preload methods. Check "bridgeName" or read the docs.')
+      throw error('Unable to access contextBridge methods. Ensure Context Isolation is enabled, or verify "bridgeName" options (see docs).')
     }
 
     this.overrideVuex();
@@ -103,5 +103,6 @@ class Plugin {
 }
 
 export default (options = {}) => async (store) => {
-  return await (new Plugin(options, store)).hydrate();
+  const plugin = new Plugin(options, store)
+  return await plugin.hydrate();
 }
