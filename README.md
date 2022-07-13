@@ -23,7 +23,7 @@ and IPC to enable mutation sharing across all processes of an Electron app.
 Two new methods are provided to your Vuex store, `shareCommit()` and `localCommit()`, allowing you to explicitly choose
 when a mutation is shared or kept local.
 
-The following diagram visualizes the behavior of `shareCommit()`. Note that shareCommit will call `localCommit()` before
+The following diagram visualizes the behavior of `shareCommit`. Note that `shareCommit` will call `localCommit` before
 sharing, and the broker ensures that the sharer does not receive a duplicate.
 
 ![Diagram](./docs/diagram.png)
@@ -54,7 +54,7 @@ export default new Vuex.Store({
 })
 ```
 
-2. In your main process create the `Bridge` and `mount` your store to it
+2. Create the `Bridge` and `mount` it with your store in the main process.
 
 ```javascript
 // [electron].js
@@ -64,12 +64,10 @@ import VuexBridge from "vuex-electron-bridge"
 
 const bridge = VuexBridge.createBridge()
 
-app.on('ready', () => {
-  bridge.mount(store)
-})
+app.on('ready', () => bridge.mount(store))
 ```
 
-3. `expose` the bridge in your [preload script](https://www.electronjs.org/docs/latest/tutorial/tutorial-preload)
+3. Expose the `Bridge` in your [preload script](https://www.electronjs.org/docs/latest/tutorial/tutorial-preload)
 
 ```javascript
 // [preload].js
@@ -78,7 +76,8 @@ import VuexBridge from "vuex-electron-bridge"
 VuexBridge.exposeBridge()
 
 // you may need to use require //
-require("vuex-electron-bridge").exposeBridge()
+require("vuex-electron-bridge")
+.exposeBridge()
 ```
 
 Congratulations, you can now share commits across processes!
@@ -88,7 +87,7 @@ Congratulations, you can now share commits across processes!
 Simply use the new method `shareCommit()` as you would `commit()`
 
 ```javascript
-// in your actions
+// in a store
 export default {
   mutations: {
     ['SET_RESULT']: (state, payload) => {
@@ -96,14 +95,15 @@ export default {
     }
   }
   actions: {
-    ['GET_RESULT']: async (context) => {
-      context.shareCommit('SET_RESULT', await someApi.getResult())
+    ['GET_RESULT']: async ({ shareCommit }) => {
+      shareCommit('SET_RESULT', await someApi.getResult())
     }
   }
 }
 
-// in a Vue component
+// in Vue components
 export default {
+  name: 'SomeVueComponent',
   methods: {
     getResult() {
       // using the action
@@ -128,10 +128,9 @@ store.shareCommit('SET_RESULT', 'incredible')
 - `shareCommit()` works by sending your commit over IPC. This means that any data you pass to it must be serializable
   according to the HTML standard
   [Structured Clone Algorithm.](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm)
-  For example, a complex object (such as a reactive Vue object) will likely require cloning or other types of
-  preparation before it can be committed.
-- Calls to `commit()` are not shared and will log a warning to notify you that a mutation was not shared. Although the
-  warning can be disabled, you should instead use the provided alias method `localCommit()`, which does not generate a
+  Some of your data may require cloning or other types of preparation before it can be shared.
+- Calls to `commit()` are not shared and will log a warning to notify you of this. Although the
+  warning can be disabled, you should instead use the provided alias `localCommit()` which does not log a
   warning and clearly indicates a mutation will be local.
 - Calls to `dispatch()` are not shared. They execute on the process that called them.
 - Renderers are initially hydrated with the entire state object from the **main process**.
@@ -139,50 +138,53 @@ store.shareCommit('SET_RESULT', 'incredible')
 
 ### Warning
 
-By definition, sharing some mutations are not others leads to a state mismatch between your Vuex stores. If you plan to
-do this and know what you're doing, or don't plan to, feel free to skip this section.
+By definition, sharing some mutations and not others leads to a state mismatch between your Vuex stores. If you don't
+plan to do this (or you do and know what you're doing) go on and skip ahead.
 
-Due to the complexities involved with mixing local and shared mutations, it's recommended to exclusively
-use `shareCommit()` and save yourself from a potential headache. However, if applied carefully, the flexibility this
+Due to the complexities involved with mixing local and shared mutations, the standing recommendation is to exclusively
+use `shareCommit()` to save yourself from a potential headache. However, if applied carefully, the flexibility this
 technique provides can be an incredibly powerful tool. Being able to share some mutations and not others allows you to
-enjoy all the benefits of shared mutations and keep performance in check when working with large or complex apps.
+enjoy all the benefits of shared mutations and account for other requirements when working with
+large or complex apps.
 
-For smaller applications, you should exclusively use `shareCommit()` and don't look back. For larger, more complex apps,
-you may see performance benefits from clever usage of `localCommit()`.
+For smaller applications, you should exclusively use `shareCommit()` and not look back. For larger, more complex apps,
+you may see some benefits, such as performance, from clever usage of `localCommit()`.
 
 ---
 
 ## API
 
-### Function `createBridge()` or `createBridge( store, <object>[options] )`
+### createBridge()
 
-Returns a new `Bridge` instance which will broker mutations from renderers and handle state persistence. Passing your
-store to `createBridge` will immediately mount the bridge. Omitting your store requires you to use `mount()` at some
-later point, such as in `app.on('ready')`.
+`createBridge( store, <object>[options] )`
 
-The returned `Bridge` instance has the following methods:
+Returns a new `Bridge` instance which will broker mutations from renderers and handle state persistence. Accepts your
+Vuex store instance and an [options](#Options) object. Passing your store to `createBridge` will immediately mount
+the bridge. Omitting your store requires you to use `mount()` at some later point, such as in `app.on('ready')`.
 
-- `mount( store, <object>[options] )` - Mounts your store to the Bridge with your choice of [options](#Options).
-- `unmount()` - Destroys the bridge and attempts to persist state.
+- `Bridge.mount( store, <object>[options] )` - Mounts the Bridge with your store and choice of [options](#Options).
+- `Bridge.unmount()` - Destroys the Bridge and attempts to persist state.
 
-### Function `exposeBridge( <string>bridgeName | <object>[options] )`
+### exposeBridge()
 
-Call in your preload script to expose `Bridge()` to your renderers. Accepts a string or [options](#Options) object.
+`exposeBridge( <string>bridgeName | <object>[options] )`
 
-### Function `createPlugin( <object>[options] )`
+Call in your preload script to expose the `Bridge` to your renderers. Accepts a string or [options](#Options) object.
 
-Returns a plugin to add to your Vuex store with any [options](#Options). The plugin extends the Vuex API with the
-following methods:
+### createPlugin()
+
+`createPlugin( <object>[options] )`
+
+Returns a plugin thats extends your Vuex store with the following methods: Accepts an [options](#Options) object.
 
 - `shareCommit(type, payload, options)` - Shares a mutation with other processes.
 - `localCommit(type, payload, options)` - Locally commit a mutation. Alias of `commit()`
 
 ## Options
 
-`vuex-electron-bridge` has state persistence disabled by default. If you simply need to enable persistence, skip to
-the [Bridge Options](#Bridge-Options). If you need to pass a lot of options, consider creating an `options.js`
-file (or similar) that exports your options object. As there are three places in which options can be passed, this will
-make your life a bit easier.
+Note: `vuex-electron-bridge` has state persistence disabled by default. If you just need to enable persistence, skip to
+the [Bridge Options](#bridge-options). If you are using many options, consider creating an `options.js` file
+(or similar) that exports your options object, as there are three places in which options can be passed.
 
 ### Shared Options
 
@@ -215,7 +217,7 @@ or `createBridge(store, [options])`
 | persistThrottle | int (milliseconds) | `1000` | Throttles state persistence. 0 to disable, increase to reduce I/O load.  |
 | storageOptions | object | `{ name: 'vuex' }`| Accepts all [electron-store](https://github.com/sindresorhus/electron-store) options |
 | storageKey | string | `'state'` | Top-level JSON key name used to persist state when using `electron-store` |
-| storageTestKey | string | `'test'` | Top-level JSON key name used to test save/load functionality of `electron-store`. (see option storageTester) |
+| storageTestKey | string | `'test'` | Top-level JSON key name used to test save/load functionality of `electron-store`. (see option `storageTester`) |
 | storageProvider | Instance | null | Accepts an instance of your own storage provider. `storageOptions` are ignored when using your own provider. `storageKey` and `storageTestKey` are only used by the Getter/Setter/Tester functions. |
 | storageGetter | Function | See definition in [options.js](./src/options.js) | Loads state using your custom storage provider |
 | storageSetter | Function | See definition in [options.js](./src/options.js) | Saves state using your custom storage provider |
