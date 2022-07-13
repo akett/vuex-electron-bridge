@@ -3,8 +3,8 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.loadOptions = exports["default"] = void 0;
-var options = {
+exports.loadOptions = exports.default = void 0;
+const options = {
   // enables/disables persisting state using the storage provider
   persist: false,
   // milliseconds to wait before persisting state; 0 to disable. higher values reduce IO load.
@@ -23,23 +23,22 @@ var options = {
   storageProvider: null,
   // should not be overridden unless using a custom storage provider.
   // should always return an object.
-  storageGetter: function storageGetter(broker) {
+  storageGetter: broker => {
     return broker.storage.get(broker.options.storageKey);
   },
   // should not be overridden unless using a custom storage provider.
   // should persist the state object.
-  storageSetter: function storageSetter(broker) {
-    var rootState = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  storageSetter: (broker, rootState = {}) => {
     if (!broker.options.persist) return;
     broker.storage.set(broker.options.storageKey, rootState);
   },
   // should not be overridden unless using a custom storage provider.
   // should perform a one-time functionality test of the storage provider.
   // will be wrapped in a try/catch for you.
-  storageTester: function storageTester(broker) {
+  storageTester: broker => {
     broker.storage.set(broker.options.storageTestKey, broker.options.storageTestKey);
     broker.storage.get(broker.options.storageTestKey);
-    broker.storage["delete"](broker.options.storageTestKey);
+    broker.storage.delete(broker.options.storageTestKey);
   },
   // the following only need to be changed if a naming conflict exists with your application
   // the name of the object exposed by the contextBridge (i.e. window.__vuex_bridge_)
@@ -53,15 +52,15 @@ var options = {
   // prefix for getters provided by helper store (e.g. getters.vuexIsHydrated, getters.vuexIsRenderer)
   getterPrefix: 'vuex'
 };
-exports["default"] = options;
+exports.default = options;
 
-var _require = require("./utils"),
-    isObject = _require.isObject,
-    isUndefined = _require.isUndefined,
-    isString = _require.isString;
+const {
+  isObject,
+  isUndefined,
+  isString
+} = require("./utils");
 
-var loadOptions = function loadOptions() {
-  var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+const loadOptions = (opts = {}) => {
   // passing options as a non-object results in complete fallback to the default options.
   if (!isObject(opts)) opts = Object.assign({}, options); // validate options, fallback to defaults
 

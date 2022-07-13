@@ -3,6 +3,8 @@
 Share Vuex mutations across Electron processes using
 a [ContextBridge](https://www.electronjs.org/docs/latest/api/context-bridge).
 
+You can find a complete example application [here](https://github.com/akett/vuex-electron-bridge-example).
+
 ## Features
 
 - **Modern Electron** - Works
@@ -14,6 +16,7 @@ a [ContextBridge](https://www.electronjs.org/docs/latest/api/context-bridge).
       [Encryption](https://github.com/sindresorhus/electron-store#encryptionkey)
       and [Migrations](https://github.com/sindresorhus/electron-store#migrations).*
 - **Explicit API** - Provides clear indication when sharing occurs.
+- **Vue Devtools Compatible!**
 
 ## Overview
 
@@ -84,7 +87,7 @@ Congratulations, you can now share commits across processes!
 
 ## Usage
 
-Simply use the new method `shareCommit()` as you would `commit()`
+Simply use the new method `shareCommit()` as you would `commit()`. Check out the [example app](https://github.com/akett/vuex-electron-bridge-example) for more.
 
 ```javascript
 // in a store

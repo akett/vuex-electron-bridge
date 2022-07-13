@@ -1,6 +1,6 @@
-import VuexOverride from "./vuex4_override";
+import extendVuex from "./extend-vuex4";
 import { loadOptions } from "./options";
-import { combineMerge, error, merge, warn } from "./utils";
+import { combineMerge, error, isObject, merge, warn } from "./utils";
 
 /**
  * This file runs on the main process and coordinates
@@ -16,13 +16,14 @@ class Broker {
     this.connections = [];
     this.storage     = null;
     this._persisting = false;
+    this.isRenderer  = false;
   }
 
   setup(store, options = {}) {
     this.store = store
 
     this.setOptions(options || this.options)
-    this.overrideVuex();
+    this.createVuexExtension();
     this.createStorage()
     this.checkStorage()
     this.hydrateFromStorage()
@@ -36,17 +37,20 @@ class Broker {
   }
 
   setOptions(options) {
-    this.options = loadOptions(options)
+    this.options   = loadOptions(options)
+    this.whitelist = this.loadFilter(this.options.whitelist, "whitelist")
+    this.blacklist = this.loadFilter(this.options.blacklist, "blacklist")
   }
 
-  overrideVuex() {
-    // Contextualize shareCommit for the main process, using a null sender ID.
-    const shareCommit = async (type, payload, options) => {
-      return this.broadcastCommit({ sender: { id: null } }, { type, payload, options });
+  // Extend Vuex with main process shareCommit (broadcastCommit)
+  createVuexExtension() {
+    const ref = this;
+
+    async function boundShareCommit(type, payload, options) {
+      return ref.broadcastCommit({ sender: { id: null } }, { type, payload, options });
     }
 
-    // Override main process Vuex.dispatch context with new shareCommit
-    (new VuexOverride()).override(this.store, shareCommit, false);
+    extendVuex(ref, boundShareCommit)
   }
 
   loadFilter(filter, name) {
@@ -85,9 +89,7 @@ class Broker {
       }
     }
 
-    this.storage   = this.options.storageProvider;
-    this.whitelist = this.loadFilter(this.options.whitelist, "whitelist")
-    this.blacklist = this.loadFilter(this.options.blacklist, "blacklist")
+    this.storage = this.options.storageProvider;
   }
 
   checkStorage() {
@@ -109,20 +111,32 @@ class Broker {
 
     const state = this.getState()
 
-    if (state) {
-      this.store.replaceState(merge(this.store.state, state, { arrayMerge: combineMerge }))
-    }
+    // TODO: add option to reject properties (at least top-level ones) that don't exist on the store
 
-    // Indicate that state was hydrated
+    const newState = isObject(state) && Object.keys(state).length > 0
+      ? merge(this.store.state, state, { arrayMerge: combineMerge })
+      : null;
+
     if (this.options.allowHelperModule) {
-      this.store.localCommit(this.options.moduleName + '_SET_IS_HYDRATED', true)
+      this.store.localCommit(this.options.moduleName + '_HYDRATE_STATE', newState)
+    }
+    else if (newState) {
+      this.store.replaceState(newState)
     }
   }
 
-  filteredState(state = {}) {
-    return !this.options.allowHelperModule
-      ? state
-      : Object.keys(state).reduce((o, k) => k !== this.options.moduleName ? (o[k] = state[k], o) : o, {})
+  isFiltered(moduleName) {
+    if (this.options.allowHelperModule && moduleName === this.options.moduleName) return true;
+    if (this.blacklist && this.blacklist(moduleName)) return true;
+    return this.whitelist && !this.whitelist(moduleName);
+  }
+
+  filteredState() {
+    // used to prevent persisting and hydrating renderers with certain state
+    // for now just a simple top-level-only filtering of state
+    // maybe allow for nested properties in future.
+    return Object.keys(this.store.state)
+                 .reduce((o, k) => this.isFiltered(k) ? o : (o[k] = this.store.state[k], o), {})
   }
 
   getState() {
@@ -134,7 +148,7 @@ class Broker {
   saveState() {
     if (!this.options.persist) return;
 
-    this.options.storageSetter(this, this.filteredState(this.store.state));
+    this.options.storageSetter(this, this.filteredState());
 
     this._persisting = false
   }
@@ -159,19 +173,17 @@ class Broker {
 
   hydrateRenderer(event) {
     // save a reference to the renderer (webContents)
-    this.connections[event.sender.id] = event.sender
-
-    // delete reference when renderer is destroyed
-    event.sender.on('destroyed', () => delete this.connections[event.sender.id])
+    if (!this.connections[event.sender.id]) {
+      this.connections[event.sender.id] = event.sender
+      // delete reference when renderer is destroyed
+      event.sender.on('destroyed', () => delete this.connections[event.sender.id])
+    }
 
     // return the state object to the renderer for hydration
-    return { state: JSON.stringify(this.filteredState(this.store.state)) };
+    return { state: JSON.stringify(this.filteredState()) };
   }
 
   broadcastCommit(event, { type, payload, options }) {
-    if (this.blacklist && this.blacklist(type)) return
-    if (this.whitelist && !this.whitelist(type)) return
-
     // run the commit locally
     this.store.localCommit(type, payload, options);
 

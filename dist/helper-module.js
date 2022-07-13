@@ -3,27 +3,39 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports["default"] = void 0;
+exports.default = void 0;
 
-function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+const hydrateState = (store, newState, path = [], module = null) => {
+  for (const property of Object.keys(newState)) {
+    const testPath = [...path, property];
 
-var _default = function _default(isRenderer, options) {
-  var _getters;
-
-  return {
-    state: {
-      __isHydrated: false,
-      __isRenderer: isRenderer
-    },
-    getters: (_getters = {}, _defineProperty(_getters, options.getterPrefix + 'IsHydrated', function (state) {
-      return state.__isHydrated;
-    }), _defineProperty(_getters, options.getterPrefix + 'IsRenderer', function (state) {
-      return state.__isRenderer;
-    }), _getters),
-    mutations: _defineProperty({}, options.moduleName + '_SET_IS_HYDRATED', function (state, payload) {
-      return state.__isHydrated = payload;
-    })
-  };
+    if (store.hasModule(testPath)) {
+      hydrateState(store, newState[property], testPath, store._modules.get(testPath));
+    } else {
+      if (module) {
+        module.state[property] = newState[property];
+      } else {
+        store.state[property] = newState[property];
+      }
+    }
+  }
 };
 
-exports["default"] = _default;
+var _default = (isRenderer, store, options) => ({
+  state: {
+    isHydrated: false,
+    isRenderer: isRenderer
+  },
+  getters: {
+    [options.getterPrefix + 'IsHydrated']: state => state.isHydrated,
+    [options.getterPrefix + 'IsRenderer']: state => state.isRenderer
+  },
+  mutations: {
+    [options.moduleName + '_HYDRATE_STATE']: (state, newState) => {
+      if (newState) hydrateState(store, newState);
+      store.state[options.moduleName].isHydrated = true;
+    }
+  }
+});
+
+exports.default = _default;

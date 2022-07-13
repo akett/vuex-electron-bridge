@@ -1,7 +1,7 @@
-import { merge, warn, error, isUndefined, isObject } from "./utils";
-import { loadOptions } from "./options";
-import VuexOverride from "./vuex4_override";
+import extendVuex from "./extend-vuex4";
 import helperModule from "./helper-module"
+import { loadOptions } from "./options";
+import { merge, error, isUndefined, isObject, combineMerge } from "./utils";
 
 /**
  * This file will be run on both the main process and renderers
@@ -14,40 +14,30 @@ import helperModule from "./helper-module"
 class Plugin {
 
   constructor(options, store) {
-    this.isRenderer = typeof window !== 'undefined';
+    this.isRenderer = typeof window !== 'undefined' || typeof process === 'undefined';
     this.store      = store;
     this.options    = loadOptions(options);
     this.bridge     = this.isRenderer ? window[this.options.bridgeName] : null;
 
     if (this.isRenderer && (!isObject(this.bridge) || isUndefined(this.bridge[this.options.ipc.connect]))) {
-      throw error(
-        'Unable to access contextBridge methods. Ensure Context Isolation is enabled, or verify "bridgeName" options (see docs).')
+      throw error('contextBridge unavailable. Ensure contextIsolation is enabled and verify "bridgeName" (see docs).')
     }
 
-    this.overrideVuex();
     this.addHelperModule();
+    this.createVuexExtension();
   }
 
-  // Override Vuex.commit with our method and make it available in Vuex.dispatch contexts
-  overrideVuex() {
-    // Preserve original commit
-    this.store.localCommit = this.store.commit
+  // Extend Vuex with shareCommit()
+  createVuexExtension() {
+    if (!this.isRenderer) return;
 
-    // Override commit() to warn of possibly unintended usage
-    this.store.commit = (type, payload, options) => {
-      this.store.localCommit(type, payload, options);
-      if (this.options.warnAboutCommit) {
-        warn(`'${type}' used 'commit()' instead of 'shareCommit()'. Please, read the docs before disabling this warning.`)
-      }
+    const ref = this;
+
+    async function boundShareCommit(type, payload, options) {
+      return ref.shareCommit(type, payload, options)
     }
 
-    // Contextualize shareCommit
-    const shareCommit = async (type, payload, options) => {
-      return this.shareCommit(type, payload, options)
-    }
-
-    // Provide shareCommit to global Vuex instance and Vuex.dispatch
-    (new VuexOverride()).override(this.store, shareCommit, this.isRenderer);
+    extendVuex(ref, boundShareCommit);
   }
 
   /**
@@ -78,25 +68,36 @@ class Plugin {
     // getter will be false until the renderer is hydrated with the state from the main process
     if (!this.options.allowHelperModule) return;
 
-    this.store.registerModule(this.options.moduleName, helperModule(this.isRenderer, this.options))
+    if (!this.store.hasModule(this.options.moduleName)) {
+      this.store.registerModule(this.options.moduleName, helperModule(this.isRenderer, this.store, this.options))
+    }
   }
 
   async hydrate() {
     // Don't run on the main process
     if (!this.isRenderer) return;
 
+    const hasDevtools = typeof window.__VUE_DEVTOOLS_GLOBAL_HOOK__ !== 'undefined';
+
     // Announce self to broker and await main state
     const connection = await this.bridge[this.options.ipc.connect]()
 
-    // Merge and replace renderer state with main state
-    if (connection && connection.state) {
-      this.store.replaceState(merge(this.store.state, JSON.parse(connection.state)))
+    // Merge renderer state with main state
+    const state    = (connection && connection.state) ? JSON.parse(connection.state) : null;
+    const newState = isObject(state) && Object.keys(state).length > 0
+      ? merge(this.store.state, JSON.parse(connection.state), { arrayMerge: combineMerge })
+      : null;
+
+    // Replace state using mutation if using helper module, otherwise use replaceState().
+    // it appears that replaceState breaks devtools, so the mutation is recommended.
+    if (this.options.allowHelperModule) {
+      this.store.localCommit(this.options.moduleName + '_HYDRATE_STATE', newState)
+    }
+    else if (newState) {
+      this.store.replaceState(newState)
     }
 
-    // Indicate that state hydrated
-    if (this.options.allowHelperModule) {
-      this.store.localCommit(this.options.moduleName + '_SET_IS_HYDRATED', true)
-    }
+    if (hasDevtools) console.log('[vuexBridge] Hydrated state.');
 
     // Listen for shared commits
     this.bridge[this.options.ipc.notify_renderers]((event, data) => this.receiveCommit(event, data))

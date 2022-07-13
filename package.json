@@ -25,6 +25,7 @@
     "@babel/plugin-proposal-export-default-from": ">=7",
     "@babel/plugin-proposal-throw-expressions": ">=7",
     "@babel/preset-env": ">=7",
+    "core-js": ">=3",
     "electron": ">=12",
     "electron-store": ">=2",
     "vuex": ">=4"
