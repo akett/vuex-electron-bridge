@@ -85,13 +85,13 @@ class Plugin {
     // Merge renderer state with main state
     const state    = (connection && connection.state) ? JSON.parse(connection.state) : null;
     const newState = isObject(state) && Object.keys(state).length > 0
-      ? merge(this.store.state, JSON.parse(connection.state), { arrayMerge: combineMerge })
+      ? merge(this.store.state, state, { arrayMerge: combineMerge })
       : null;
 
     // Replace state using mutation if using helper module, otherwise use replaceState().
     // it appears that replaceState breaks devtools, so the mutation is recommended.
     if (this.options.allowHelperModule) {
-      this.store.localCommit(this.options.moduleName + '_HYDRATE_STATE', newState)
+      this.store.localCommit(this.options.moduleName + '_HYDRATE_STATE', state)
     }
     else if (newState) {
       this.store.replaceState(newState)

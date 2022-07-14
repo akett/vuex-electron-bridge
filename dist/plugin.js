@@ -102,13 +102,13 @@ class Plugin {
     const connection = await this.bridge[this.options.ipc.connect](); // Merge renderer state with main state
 
     const state = connection && connection.state ? JSON.parse(connection.state) : null;
-    const newState = (0, _utils.isObject)(state) && Object.keys(state).length > 0 ? (0, _utils.merge)(this.store.state, JSON.parse(connection.state), {
+    const newState = (0, _utils.isObject)(state) && Object.keys(state).length > 0 ? (0, _utils.merge)(this.store.state, state, {
       arrayMerge: _utils.combineMerge
     }) : null; // Replace state using mutation if using helper module, otherwise use replaceState().
     // it appears that replaceState breaks devtools, so the mutation is recommended.
 
     if (this.options.allowHelperModule) {
-      this.store.localCommit(this.options.moduleName + '_HYDRATE_STATE', newState);
+      this.store.localCommit(this.options.moduleName + '_HYDRATE_STATE', state);
     } else if (newState) {
       this.store.replaceState(newState);
     }

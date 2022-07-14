@@ -114,14 +114,14 @@ class Broker {
     // TODO: add option to reject properties (at least top-level ones) that don't exist on the store
 
     const newState = isObject(state) && Object.keys(state).length > 0
-      ? merge(this.store.state, state, { arrayMerge: combineMerge })
+      ? state
       : null;
 
     if (this.options.allowHelperModule) {
       this.store.localCommit(this.options.moduleName + '_HYDRATE_STATE', newState)
     }
     else if (newState) {
-      this.store.replaceState(newState)
+      this.store.replaceState(merge(this.store.state, newState, { arrayMerge: combineMerge }))
     }
   }
 
