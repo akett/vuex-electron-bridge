@@ -56,7 +56,7 @@ class Broker {
   createVuexExtension() {
     const ref = this;
 
-    async function boundShareCommit(type, payload, options) {
+    async function shareCommit(type, payload, options) {
       return ref.broadcastCommit({
         sender: {
           id: null
@@ -68,7 +68,7 @@ class Broker {
       });
     }
 
-    (0, _extendVuex.default)(ref, boundShareCommit);
+    (0, _extendVuex.default)(ref, shareCommit);
   }
 
   loadFilter(filter, name) {
@@ -80,7 +80,7 @@ class Broker {
       return filter;
     }
 
-    throw (0, _utils.error)(`Filter "${name}" should be Array or Function.`);
+    (0, _utils.error)(`Filter "${name}" should be Array or Function.`);
   }
 
   filterInArray(list) {

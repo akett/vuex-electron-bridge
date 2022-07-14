@@ -5,7 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = void 0;
 
-const hydrateState = (store, newState, path = [], module = null) => {
+const hydrateNestedState = (store, newState, path = [], module = null) => {
   for (const property of Object.keys(newState)) {
     if (module) {
       getNestedState(store.state, path)[property] = module.state[property] = newState[property];
@@ -16,7 +16,7 @@ const hydrateState = (store, newState, path = [], module = null) => {
     const newPath = [...path, property];
 
     if (store.hasModule(newPath)) {
-      hydrateState(store, newState[property], newPath, store._modules.get(newPath));
+      hydrateNestedState(store, newState[property], newPath, store._modules.get(newPath));
     }
   }
 };
@@ -36,7 +36,7 @@ var _default = (isRenderer, store, options) => ({
   },
   mutations: {
     [options.moduleName + '_HYDRATE_STATE']: (state, newState) => {
-      if (newState) hydrateState(store, newState);
+      if (newState) hydrateNestedState(store, newState);
       store.state[options.moduleName].isHydrated = true;
     }
   }

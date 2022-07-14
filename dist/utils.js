@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.warn = exports.merge = exports.isUndefined = exports.isString = exports.isPromise = exports.isObject = exports.error = exports.combineMerge = void 0;
+exports.warn = exports.merge = exports.isUndefined = exports.isString = exports.isPromise = exports.isObject = exports.info = exports.error = exports.combineMerge = exports.assert = void 0;
 
 var _deepmerge = _interopRequireDefault(require("deepmerge"));
 
@@ -58,14 +58,26 @@ const isPromise = val => {
 
 exports.isPromise = isPromise;
 
+const info = (message, ...args) => {
+  (console.info || console.log)('[vuexBridge]', message, ...args);
+};
+
+exports.info = info;
+
 const warn = (message, ...args) => {
-  console.log('[vuex-electron-bridge]', message, ...args);
+  (console.warn || console.log)('[vuexBridge]', message, ...args);
 };
 
 exports.warn = warn;
 
-const error = message => {
-  return new Error("[vuex-electron-bridge] " + message);
+const assert = (condition, msg) => {
+  if (!condition) error(msg);
+};
+
+exports.assert = assert;
+
+const error = msg => {
+  throw new Error("[vuexBridge] " + msg);
 };
 
 exports.error = error;
