@@ -19,6 +19,14 @@
   "author": "Andy Crockett",
   "license": "MIT",
   "homepage": "https://github.com/akett/vuex-electron-bridge#readme",
+  "keywords": [
+    "vue",
+    "vuex",
+    "electron",
+    "context",
+    "bridge",
+    "ipc"
+  ],
   "devDependencies": {
     "@babel/cli": ">=7",
     "@babel/core": ">=7",
