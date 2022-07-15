@@ -18,7 +18,7 @@ const getNestedState = (state, path) => {
   return path.reduce((state, key) => state[key], state)
 }
 
-export default (isRenderer, store, options) => ({
+const helperModule = (isRenderer, store, options) => ({
   state: {
     isHydrated: false,
     isRenderer: isRenderer,
@@ -35,3 +35,9 @@ export default (isRenderer, store, options) => ({
     },
   },
 })
+
+export {
+  hydrateNestedState,
+  getNestedState,
+  helperModule as default
+}
