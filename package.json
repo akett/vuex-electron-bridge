@@ -1,6 +1,6 @@
 {
   "name": "vuex-electron-bridge",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Share Vuex mutations across Electron processes using a ContextBridge",
   "main": "./dist/index.js",
   "sideEffects": false,
