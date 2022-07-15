@@ -3,7 +3,7 @@
 Share Vuex mutations across Electron processes using
 a [ContextBridge](https://www.electronjs.org/docs/latest/api/context-bridge).
 
-You can find a complete example application [here](https://github.com/akett/vuex-electron-bridge-example).
+*Only supports Vuex 4. Example application available [here](https://github.com/akett/vuex-electron-bridge-example).*
 
 ## Features
 
@@ -80,14 +80,15 @@ VuexBridge.exposeBridge()
 
 // you may need to use require //
 require("vuex-electron-bridge")
-.exposeBridge()
+  .exposeBridge()
 ```
 
 Congratulations, you can now share commits across processes!
 
 ## Usage
 
-Simply use the new method `shareCommit()` as you would `commit()`. Check out the [example app](https://github.com/akett/vuex-electron-bridge-example) for more.
+Simply use the new method `shareCommit()` as you would `commit()`. Check out
+the [example app](https://github.com/akett/vuex-electron-bridge-example) for more.
 
 ```javascript
 // in a store
@@ -132,9 +133,9 @@ store.shareCommit('SET_RESULT', 'incredible')
   according to the HTML standard
   [Structured Clone Algorithm.](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm)
   Some of your data may require cloning or other types of preparation before it can be shared.
-- Calls to `commit()` are not shared and will log a warning to notify you of this. Although the
-  warning can be disabled, you should instead use the provided alias `localCommit()` which does not log a
-  warning and clearly indicates a mutation will be local.
+- Calls to `commit()` are not shared and will log a warning to notify you of this. Although the warning can be disabled,
+  you should instead use the provided alias `localCommit()` which does not log a warning and clearly indicates a
+  mutation will be local.
 - Calls to `dispatch()` are not shared. They execute on the process that called them.
 - Renderers are initially hydrated with the entire state object from the **main process**.
 - Only the main process state can be persisted. Local mutations on renderers will therefore not be persisted.
@@ -147,11 +148,24 @@ plan to do this (or you do and know what you're doing) go on and skip ahead.
 Due to the complexities involved with mixing local and shared mutations, the standing recommendation is to exclusively
 use `shareCommit()` to save yourself from a potential headache. However, if applied carefully, the flexibility this
 technique provides can be an incredibly powerful tool. Being able to share some mutations and not others allows you to
-enjoy all the benefits of shared mutations and account for other requirements when working with
-large or complex apps.
+enjoy all the benefits of shared mutations and account for other requirements when working with large or complex apps.
 
 For smaller applications, you should exclusively use `shareCommit()` and not look back. For larger, more complex apps,
 you may see some benefits, such as performance, from clever usage of `localCommit()`.
+
+## Helper Module
+
+By default, `vuex-electron-bridge` installs a "helper module" into your Vuex store. It can be disabled or renamed,
+however, it's recommended to allow this module (don't worry, the module will not be persisted).
+
+The module provides a simple getter for hydration status (default name: `vuexIsHydrated`) to allow for your own
+conditional logic (such as delaying some operations until state is received), and also enables mutation-based state hydration for renderers. Without the module, state is hydrated
+using `Vuex.replaceState`, which works just fine for hydration, but has the unfortunate side effect of totally breaking
+state viewing/editing in VueDevtools (VueDevtools will only display the default state of your store).
+
+Hydration via the helper module's provided mutation works around this issue, allow you to view and edit state in
+VueDevtools. There is still an issue with editing state while in a nested module view, but any state can still be edited
+normally from the root state view. Hopefully this can be completely fixed in future versions.
 
 ---
 
@@ -162,8 +176,8 @@ you may see some benefits, such as performance, from clever usage of `localCommi
 `createBridge( store, <object>[options] )`
 
 Returns a new `Bridge` instance which will broker mutations from renderers and handle state persistence. Accepts your
-Vuex store instance and an [options](#Options) object. Passing your store to `createBridge` will immediately mount
-the bridge. Omitting your store requires you to use `mount()` at some later point, such as in `app.on('ready')`.
+Vuex store instance and an [options](#Options) object. Passing your store to `createBridge` will immediately mount the
+bridge. Omitting your store requires you to use `mount()` at some later point, such as in `app.on('ready')`.
 
 - `Bridge.mount( store, <object>[options] )` - Mounts the Bridge with your store and choice of [options](#Options).
 - `Bridge.unmount()` - Destroys the Bridge and attempts to persist state.
