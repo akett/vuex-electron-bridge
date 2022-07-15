@@ -1,18 +1,21 @@
-const hydrateState = (store, newState, path = [], module = null) => {
+const hydrateNestedState = (store, newState, path = [], module = null) => {
   for (const property of Object.keys(newState)) {
-    const testPath = [...path, property];
-    if (store.hasModule(testPath)) {
-      hydrateState(store, newState[property], testPath, store._modules.get(testPath))
+    if (module) {
+      getNestedState(store.state, path)[property] = module.state[property] = newState[property]
     }
     else {
-      if (module) {
-        module.state[property] = newState[property]
-      }
-      else {
-        store.state[property] = newState[property]
-      }
+      store.state[property] = newState[property]
+    }
+
+    const newPath = [...path, property];
+    if (store.hasModule(newPath)) {
+      hydrateNestedState(store, newState[property], newPath, store._modules.get(newPath))
     }
   }
+}
+
+const getNestedState = (state, path) => {
+  return path.reduce((state, key) => state[key], state)
 }
 
 export default (isRenderer, store, options) => ({
@@ -26,7 +29,7 @@ export default (isRenderer, store, options) => ({
   },
   mutations: {
     [options.moduleName + '_HYDRATE_STATE']: (state, newState) => {
-      if (newState) hydrateState(store, newState);
+      if (newState) hydrateNestedState(store, newState);
 
       store.state[options.moduleName].isHydrated = true
     },

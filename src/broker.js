@@ -46,11 +46,11 @@ class Broker {
   createVuexExtension() {
     const ref = this;
 
-    async function boundShareCommit(type, payload, options) {
+    async function shareCommit(type, payload, options) {
       return ref.broadcastCommit({ sender: { id: null } }, { type, payload, options });
     }
 
-    extendVuex(ref, boundShareCommit)
+    extendVuex(ref, shareCommit)
   }
 
   loadFilter(filter, name) {
@@ -63,7 +63,7 @@ class Broker {
       return filter
     }
 
-    throw error(`Filter "${name}" should be Array or Function.`)
+    error(`Filter "${name}" should be Array or Function.`)
   }
 
   filterInArray(list) {
@@ -114,14 +114,14 @@ class Broker {
     // TODO: add option to reject properties (at least top-level ones) that don't exist on the store
 
     const newState = isObject(state) && Object.keys(state).length > 0
-      ? merge(this.store.state, state, { arrayMerge: combineMerge })
+      ? state
       : null;
 
     if (this.options.allowHelperModule) {
       this.store.localCommit(this.options.moduleName + '_HYDRATE_STATE', newState)
     }
     else if (newState) {
-      this.store.replaceState(newState)
+      this.store.replaceState(merge(this.store.state, newState, { arrayMerge: combineMerge }))
     }
   }
 

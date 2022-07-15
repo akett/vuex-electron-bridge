@@ -40,11 +40,19 @@ export const isPromise = (val) => {
   return val && typeof val.then === 'function'
 }
 
-export const warn = (message, ...args) => {
-  console.log('[vuex-electron-bridge]', message, ...args)
+export const info = (message, ...args) => {
+  (console.info || console.log)('[vuexBridge]', message, ...args)
 }
 
-export const error = (message) => {
-  return new Error("[vuex-electron-bridge] " + message)
+export const warn = (message, ...args) => {
+  (console.warn || console.log)('[vuexBridge]', message, ...args)
+}
+
+export const assert = (condition, msg) => {
+  if (!condition) error(msg)
+}
+
+export const error = (msg) => {
+  throw new Error("[vuexBridge] " + msg)
 }
 
